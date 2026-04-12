@@ -1,0 +1,37 @@
+# .github/workflows/python-ci.yml
+name: Python CI  # Название вашего автоматического процесса
+
+# Запускать этот процесс при каждом 'push' в ветку 'main'
+on:
+  push:
+    branches: [ "main" ]
+
+# Список задач (jobs), которые нужно выполнить
+jobs:
+  build-and-test:  # ID задачи
+    runs-on: ubuntu-latest  # Запускать на свежей версии Ubuntu
+
+    # Последовательность шагов (steps) внутри задачи
+    steps:
+      # 1. Скачать код из репозитория на виртуальную машину GitHub
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Установить нужную версию Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'  # Версия Python из вашей виртуальной среды
+
+      # 3. Установить зависимости Flask (если они есть в requirements.txt)
+      #    Замените на pip3 install flask, если requirements.txt нет
+      - name: Install dependencies
+        run: |
+          pip install Flask
+
+      # 4. Запустить ваш скрипт
+      #    Обратите внимание: мы переходим в папку flaskapp, где лежит файл
+      - name: Run the script
+        run: |
+          cd flaskapp
+          python3 some_app.py
