@@ -1,35 +1,59 @@
-# .github/workflows/python-ci.yml
-name: Python CI  # Название вашего автоматического процесса
+# Имя рабочего процесса
+name: Python CI
 
-# Запускать этот процесс при каждом 'push' в ветку 'main'
+# Условия запуска: при пуше в ветку main
 on:
   push:
     branches: [ "main" ]
 
-# Список задач (jobs), которые нужно выполнить
+# Задачи (jobs) которые нужно выполнить
 jobs:
-  build-and-test:  # ID задачи
-    runs-on: ubuntu-latest  # Запускать на свежей версии Ubuntu
-
-    # Последовательность шагов внутри задачи
+  # Название задачи
+  build-and-test:
+    # На какой операционной системе запускать
+    runs-on: ubuntu-latest
+    
+    # Шаги (steps) внутри задачи
     steps:
-      # 1. Скачать код из репозитория на виртуальную машину GitHub
+      # Шаг 1: скачать код из репозитория
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Установить нужную версию Python
+      # Шаг 2: установить Python нужной версии
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'  # Версия Python из виртуальной среды
+          python-version: '3.8'
 
-      # 3. Установить зависимости Flask
+      # Шаг 3: установить все необходимые библиотеки
       - name: Install dependencies
         run: |
-          pip install Flask numpy matplotlib pillow lxml requests flask-wtf flask-bootstrap
+          pip install Flask
+          pip install numpy
+          pip install matplotlib
+          pip install pillow
+          pip install lxml
+          pip install requests
+          pip install flask-wtf
+          pip install flask-bootstrap
 
-      # 4. Запустить скрипт
-      - name: Run the script
+      # Шаг 4: запустить приложение и тесты
+      - name: Run script
         run: |
+          # Переходим в папку с приложением
           cd flaskapp
-          python3 some_app.py
+          
+          # Запускаем Flask-сервер в фоновом режиме (&)
+          # Сохраняем его PID (идентификатор процесса) в переменную APP_PID
+          python3 some_app.py &
+          APP_PID=$!
+          
+          # Ждём 10 секунд, пока сервер полностью запустится
+          sleep 10
+          
+          # Запускаем тесты (client.py отправляет запросы к серверу)
+          python3 client.py
+          
+          # Останавливаем сервер по его PID
+          # Без этого GitHub Actions будет висеть до лимита времени (6 часов)
+          kill -TERM $APP_PID
