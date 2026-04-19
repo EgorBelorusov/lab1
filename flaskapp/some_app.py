@@ -1,6 +1,8 @@
 print("Hello world")
 
 import numpy as np
+import datetime
+from wtforms import BooleanField
 import matplotlib.pyplot as plt
 from flask import Flask, render_template, request, Response
 from flask_wtf import FlaskForm, RecaptchaField
@@ -11,7 +13,7 @@ from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
 import os
 import base64
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import json
 import lxml.etree as ET
@@ -60,6 +62,28 @@ def swap_stripes(image_array, direction, stripe_width):
     return result
 
 
+def add_timestamp_to_image(image, text):
+     # Добавляет текстовую подпись на изображение
+    draw = ImageDraw.Draw(image)
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", 30)
+    except:
+        font = ImageFont.load_default()
+
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    full_text = f"{text}: {timestamp}"
+
+    bbox = draw.textbbox((0, 0), full_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    width, height = image.size
+    position = (width - text_width - 20, height - text_height - 20)
+
+    draw.text(position, full_text, fill="white", font=font, stroke_width=2, stroke_fill="black")
+    return image
+
+
 # Функция сохранения гистограммы цветов
 def save_histogram(image_array, save_path):
 # Сохраняет гистограмму распределения цветов
@@ -83,6 +107,7 @@ class NetForm(FlaskForm):
         FileRequired(),
         FileAllowed(['jpg', 'png', 'jpeg'], 'Images only!')
     ])
+    add_timestamp = BooleanField('Добавить дату и время на изображение')
     direction = SelectField('Direction', choices=[
         ('vertical', 'Vertical'),
         ('horizontal', 'Horizontal')
@@ -166,6 +191,11 @@ def net():
             result_img = Image.fromarray(result_array)
             result_img.save(result_path)
 
+            if form.add_timestamp.data:
+                result_img = add_timestamp_to_image(result_img, "Обработано")
+
+            result_img.save(result_path)
+
             # Формируем URL
             original_image_url = f'/static/uploads/original_{filename}'
             result_image_url = f'/static/uploads/{result_filename}'
@@ -201,6 +231,8 @@ def apinet():
         ret = json.dumps(neurodic)
         resp = Response(response=ret, status=200, mimetype="application/json")
         return resp
+
+    return Response(response='{"error": "Need JSON"}', status=400, mimetype="application/json")
 
 
 @app.route("/apixml", methods=['GET', 'POST'])
